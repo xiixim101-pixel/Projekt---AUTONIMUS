@@ -1,0 +1,129 @@
+<!--
+  Projekt Robot VR-Telemetria, RC - Marcin Słowik 2026
+  Projekt_AUTONIMUS - APK 2D (pojedynczy widok)
+-->
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>ESP32-CAM VR</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      touch-action: manipulation;
+    }
+    #container {
+      display: flex;
+      width: 200vw;
+      height: 100vh;
+      background: #000;
+    }
+    .view {
+      width: 50%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: pixelated;
+    }
+    #zoom-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      z-index: 100;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(40,40,40,0.75);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+      font-size: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      opacity: 1;
+      transition: opacity 0.7s ease;
+      touch-action: manipulation;
+      user-select: none;
+    }
+    #zoom-btn.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #zoom-btn:active {
+      transform: scale(1.12);
+      background: rgba(70,70,70,0.9);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="container"></div>
+  <div id="zoom-btn">🔍</div>
+
+<script>
+const container = document.getElementById('container');
+const zoomBtn = document.getElementById('zoom-btn');
+const STREAM_URL = 'http://192.168.4.1';
+const OFFSET = 0;          // ← tutaj możesz zmienić domyślny odstęp
+
+let hideTimeout = null;
+const HIDE_DELAY = 3200;    // ile ms przycisk ma być widoczny
+
+function resetHideTimer() {
+  if (hideTimeout) clearTimeout(hideTimeout);
+  zoomBtn.classList.remove('hidden');
+  
+  hideTimeout = setTimeout(() => {
+    zoomBtn.classList.add('hidden');
+  }, HIDE_DELAY);
+}
+
+// Pokazywanie po dotknięciu / kliknięciu
+document.addEventListener('touchstart', resetHideTimer, {passive: true});
+document.addEventListener('click', resetHideTimer);
+
+// Aktualizacja obrazu (tylko VR)
+function updateImages() {
+  const t = Date.now();
+  container.innerHTML = `
+    <img class="view" src="${STREAM_URL}?t=${t}" style="transform: translateX(-${OFFSET}px);">
+    
+  `;
+}
+
+function refreshStream() {
+  const now = Date.now();
+  document.querySelectorAll('#container img').forEach(img => {
+    img.src = STREAM_URL + '?t=' + now;
+  });
+}
+
+// Przycisk pełnego ekranu
+zoomBtn.onclick = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.()
+      .catch(err => console.log("Pełny ekran nieudany:", err));
+  } else {
+    document.exitFullscreen?.();
+  }
+  resetHideTimer(); // po kliknięciu też odświeżamy timer
+};
+
+// Start
+updateImages();
+resetHideTimer();           // od razu startujemy timer → przycisk zniknie po ~3s
+
+// Automatyczne odświeżanie strumienia
+setInterval(refreshStream, 5800);
+</script>
+</body>
+</html>
