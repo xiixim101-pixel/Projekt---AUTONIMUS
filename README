@@ -1,0 +1,97 @@
+# Projekt AUTONIMUS
+
+Autko RC z podglądem **FPV w goglach VR** i **telemetrią na HUD-zie**.
+Sterowanie odbywa się zwykłym nadajnikiem RC, a obraz z kamery i dane o napędzie/skręcie trafiają na telefon w goglach.
+
+*Autor: Marcin Słowik, 2026*
+
+![Autko](docs/photos/07.jpg)
+
+--> Jak to działa
+
+```
+Nadajnik Turnigy TGY-i6 ──2,4 GHz──► Odbiornik TGY-iA6
+                                        ├─ CH4 (napęd) ─┬─► Arduino UNO ──► L298N ──► silniki
+                                        └─ CH2 (skręt) ─┤
+                                                        └─► NodeMCU (podsłuch impulsów) ──► JSON /data ─┐
+ESP32-CAM (Access Point "Projekt_AUTONIMUS") ──► strumień MJPEG ─────────────────────────────────────────┤
+                                                                                                          ▼
+                                                                          Telefon w goglach VR (web/vr.html)
+```
+
+1. **UNO** czyta impulsy RC z odbiornika (przerwania INT0/INT1) i steruje mostkiem H L298N: napęd (przód/tył) i skręt (lewo/prawo) przez PWM.
+2. **NodeMCU** równolegle "podsłuchuje" te same dwa kanały RC, przelicza je na wartości PWM i udostępnia jako JSON pod `/data`.
+3. **ESP32-CAM** tworzy sieć Wi-Fi (Access Point) i nadaje strumień MJPEG pod `http://192.168.4.1/`.
+4. **Telefon** łączy się z Wi-Fi kamery i otwiera stronę `web/vr.html` (dwa obrazy dla gogli + HUD z telemetrią) lub `web/2d.html` (pojedynczy widok).
+
+--> Zawartość repozytorium
+
+| Ścieżka | Opis |
+|---|---|
+| `firmware/esp32cam_ap_stream/` | ESP32-CAM: Access Point + strumień MJPEG |
+| `firmware/nodemcu_telemetry/` | NodeMCU v3: podsłuch kanałów RC, JSON z telemetrią |
+| `firmware/uno_motor_control/` | Arduino UNO: sterowanie silnikami z RC |
+| `web/vr.html` | Aplikacja VR (stereo + HUD) |
+| `web/2d.html` | Aplikacja 2D (jeden obraz, pełny ekran) |
+| `docs/` | Schemat połączeń i zdjęcia |
+
+--> Lista części
+
+- Arduino UNO
+- Sterownik silników L298N (mostek H)
+- Odbiornik Turnigy TGY-iA6 (2,4 GHz, 6 kanałów) + nadajnik TGY-i6
+- NodeMCU ESP8266 v3
+- ESP32-CAM (AI-Thinker)
+- Akumulator LiPo (zasilanie elektroniki) i akumulator do silników (patrz schemat)
+- Przetwornica (ładowarka samochodowa USB jako zasilacz 5 V) + wyłączniki
+- Kondensatory (m.in. 1000 µF przy kamerze), rezystory dzielnika napięcia na liniach RC do NodeMCU
+- Podwozie z silnikiem napędowym i silnikiem skrętu
+- Telefon + gogle VR
+
+--> Schemat i piny
+
+![Schemat](docs/schemat.png)
+
+> Schemat jest poglądowy, grafiki komponentów służą wyłącznie jako ilustracja.
+
+**Arduino UNO**
+
+| Pin | Funkcja |
+|---|---|
+| D2 (INT0) | RC CH4 – napęd |
+| D3 (INT1) | RC CH2 – skręt |
+| D9 / D6 | L298N – napęd przód / tył (PWM) |
+| D11 / D10 | L298N – skręt lewo / prawo (PWM) |
+
+**NodeMCU v3**
+
+| Pin | Funkcja |
+|---|---|
+| D2 (GPIO4) | RC – napęd (przez dzielnik napięcia) |
+| D1 (GPIO5) | RC – skręt (przez dzielnik napięcia) |
+
+--> Uruchomienie
+
+1. **Wgraj firmware** (Arduino IDE):
+   - `esp32cam_ap_stream` → płytka *AI Thinker ESP32-CAM* (wymaga programatora FTDI/płytki z USB, GPIO0 do GND przy wgrywaniu)
+   - `nodemcu_telemetry` → płytka *NodeMCU 1.0 (ESP-12E)*
+   - `uno_motor_control` → płytka *Arduino UNO*
+2. Włącz zasilanie. ESP32-CAM utworzy sieć **`Projekt_AUTONIMUS`** (hasło w kodzie: `12345678` – zmień na własne).
+3. NodeMCU połączy się z tą siecią. Jego adres IP sprawdzisz w Serial Monitorze (115200) i wpiszesz w `web/vr.html` (`NODE_IP`).
+4. Połącz telefon z siecią `Projekt_AUTONIMUS` i otwórz `web/vr.html` (lub `web/2d.html`) w przeglądarce, następnie kliknij **AKTYWUJ VR** i włóż telefon do gogli.
+
+--> Znane ograniczenia / do zrobienia
+
+- Brak failsafe w UNO: po utracie sygnału RC auto może kontynuować ostatnią komendę.
+- Strumień kamery obsługuje jednego klienta – w `vr.html` oba "oczy" ładują ten sam adres.
+- HUD pokazuje przeskalowane wartości (napęd 35–150, skręt 35–55), a nie rzeczywiste PWM z UNO (0–255).
+- W kodzie UNO jest nieużywany odbiór ramek z ESP przez UART.
+- Adres NodeMCU (`192.168.4.2`) jest wpisany na sztywno.
+
+--> Bezpieczeństwo
+
+Projekt zawiera akumulatory LiPo. Używaj odpowiednich ładowarek, nie zostawiaj ładowania bez nadzoru i zabezpiecz przewody zasilania przed zwarciem. Przy pierwszych testach unieś auto kołami do góry.
+
+--> Licencja
+
+[MIT](LICENSE) © 2026 Marcin Słowik
