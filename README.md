@@ -1,11 +1,12 @@
- - Projekt AUTONIMUS
+[README.md](https://github.com/user-attachments/files/32482610/README.md)
+# Projekt AUTONIMUS
 
 Autko RC z podglądem **FPV w goglach VR** i **telemetrią na HUD-zie**.
 Sterowanie odbywa się zwykłym nadajnikiem RC, a obraz z kamery i dane o napędzie/skręcie trafiają na telefon w goglach.
 
 *Autor: Marcin Słowik, 2026*
 
-docs/photos/07.jpg
+![Autko](docs/photos/07.jpg)
 
 --> Jak to działa
 
@@ -50,7 +51,7 @@ ESP32-CAM (Access Point "Projekt_AUTONIMUS") ──► strumień MJPEG ───
 
 --> Schemat i piny
 
-docs/schemat.png
+![Schemat](docs/schemat.png)
 
 > Schemat jest poglądowy, grafiki komponentów służą wyłącznie jako ilustracja.
 
